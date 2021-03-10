@@ -1,0 +1,165 @@
+# authors :
+# SAID "Smeunzo" Faissoil GitHub https://github.com/Smeunzo
+# Belhachemi "belHak" Abdelhakim GitHub https://github.com/belHak
+
+version : "3.9"
+services:
+
+  #  Inventory DB
+  mysql_inv:
+    container_name: mysql_inv
+    image: library/mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: inventories
+    ports:
+      - "3306"
+    networks:
+      - default-bridge
+    restart:
+      "no"
+
+  #  User DB
+  mysql_usr:
+    container_name: mysql_usr
+    image: library/mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: users
+    ports:
+      - "3306"
+    networks:
+      - default-bridge
+    restart:
+      "no"
+  #  User Info DB
+  mysql_us_i:
+    container_name: mysql_us_i
+    image: library/mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: userI
+    ports:
+      - "3306"
+    networks:
+      - default-bridge
+    restart:
+      "no"
+
+  config:
+    container_name: config
+    build:
+      services/config/
+    ports:
+      - "8889"
+    networks:
+      - default-bridge
+    restart: "no"
+    #    Just check if the container is accessible
+    healthcheck:
+      test: ping -c 127.0.0.1 | echo $$ ?
+      interval: 40s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  eureka:
+    container_name: eureka
+    build:
+      services/eureka/
+    ports:
+      - "8761"
+    networks:
+      - default-bridge
+    restart: on-failure
+    depends_on:
+      config:
+        condition: service_healthy
+    healthcheck:
+      test: ping -c 127.0.0.1 | echo $$ ?
+      interval: 40s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  gateway:
+    container_name: gateway
+    build:
+      services/gateway/
+    ports:
+      - "8888:8888"
+    networks:
+      - default-bridge
+    restart: on-failure
+    depends_on:
+      config:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+    healthcheck:
+      test: ping -c 127.0.0.1 | echo $$ ?
+      interval: 40s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  inventory:
+    container_name: inventory
+    build:
+      services/inventory/
+    ports:
+      - "8082"
+    networks:
+      - default-bridge
+    restart: on-failure
+    depends_on:
+      config:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+      mysql_inv:
+        condition: service_started
+
+  user:
+    container_name: user
+    build:
+      services/user/
+    ports:
+      - "8083"
+    networks:
+      - default-bridge
+    restart: on-failure
+    depends_on:
+      config:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+      mysql_usr:
+        condition: service_started
+
+  user-info:
+    container_name: user-info
+    build:
+      services/user-info/
+    ports:
+      - "8081"
+    networks:
+      - default-bridge
+    restart: on-failure
+    depends_on:
+      config:
+        condition: service_healthy
+      eureka:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+      mysql_us_i:
+        condition: service_started
+
+networks:
+  default-bridge:
+    driver: bridge

@@ -1,3 +1,4 @@
+MAINTAINER Smeunzo GitHub https://github.com/Smeunzo
 FROM debian:stable-slim
 
 RUN apt-get update -y && apt-get upgrade -y\
